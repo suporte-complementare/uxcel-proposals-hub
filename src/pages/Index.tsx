@@ -86,7 +86,7 @@ const Index = () => {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={logo} alt="Complementare Logo" className="h-12 w-auto" />
+              <img src={logo} alt="Complementare Logo" className="h-20 w-auto" />
               <div>
                 <h1 className="text-3xl font-bold text-foreground">
                   Controle de Propostas
