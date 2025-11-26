@@ -18,10 +18,10 @@ export type Database = {
         Row: {
           client_name: string
           created_at: string
+          expected_return_date: string | null
           id: string
           last_follow_up: string
           notes: string | null
-          project_type: string
           sent_date: string
           status: Database["public"]["Enums"]["proposal_status"]
           updated_at: string
@@ -31,10 +31,10 @@ export type Database = {
         Insert: {
           client_name: string
           created_at?: string
+          expected_return_date?: string | null
           id?: string
           last_follow_up?: string
           notes?: string | null
-          project_type: string
           sent_date?: string
           status?: Database["public"]["Enums"]["proposal_status"]
           updated_at?: string
@@ -44,10 +44,10 @@ export type Database = {
         Update: {
           client_name?: string
           created_at?: string
+          expected_return_date?: string | null
           id?: string
           last_follow_up?: string
           notes?: string | null
-          project_type?: string
           sent_date?: string
           status?: Database["public"]["Enums"]["proposal_status"]
           updated_at?: string
