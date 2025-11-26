@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Search, AlertCircle } from "lucide-react";
+import { Edit, Trash2, Search, AlertCircle, ArrowUpDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +30,9 @@ interface ProposalsTableProps {
   onDelete: (id: string) => void;
 }
 
+type SortField = "status" | "lastFollowUp" | "expectedReturnDate";
+type SortDirection = "asc" | "desc";
+
 export const ProposalsTable = ({
   proposals,
   onEdit,
@@ -37,6 +40,8 @@ export const ProposalsTable = ({
 }: ProposalsTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const getStatusBadge = (status: ProposalStatus) => {
     const statusConfig = {
@@ -65,7 +70,8 @@ export const ProposalsTable = ({
     );
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date?: Date) => {
+    if (!date) return "-";
     return new Intl.DateTimeFormat("pt-BR").format(date);
   };
 
@@ -83,17 +89,63 @@ export const ProposalsTable = ({
     return diffDays;
   };
 
+  const getDaysUntilReturn = (date?: Date) => {
+    if (!date) return null;
+    const today = new Date();
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const needsFollowUp = (proposal: Proposal) => {
     return (
       proposal.status === "pending" && getDaysSinceFollowUp(proposal.lastFollowUp) > 7
     );
   };
 
-  const filteredProposals = proposals.filter(
-    (proposal) =>
-      proposal.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proposal.projectType.toLowerCase().includes(searchTerm.toLowerCase())
+  const isReturnOverdue = (proposal: Proposal) => {
+    if (!proposal.expectedReturnDate) return false;
+    const daysUntil = getDaysUntilReturn(proposal.expectedReturnDate);
+    return daysUntil !== null && daysUntil < 0;
+  };
+
+  const isReturnSoon = (proposal: Proposal) => {
+    if (!proposal.expectedReturnDate) return false;
+    const daysUntil = getDaysUntilReturn(proposal.expectedReturnDate);
+    return daysUntil !== null && daysUntil >= 0 && daysUntil <= 3;
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const filteredProposals = proposals.filter((proposal) =>
+    proposal.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedProposals = [...filteredProposals].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let comparison = 0;
+
+    if (sortField === "status") {
+      const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+      comparison = statusOrder[a.status] - statusOrder[b.status];
+    } else if (sortField === "lastFollowUp") {
+      comparison = a.lastFollowUp.getTime() - b.lastFollowUp.getTime();
+    } else if (sortField === "expectedReturnDate") {
+      const aDate = a.expectedReturnDate?.getTime() ?? Infinity;
+      const bDate = b.expectedReturnDate?.getTime() ?? Infinity;
+      comparison = aDate - bDate;
+    }
+
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
 
   return (
     <>
@@ -102,7 +154,7 @@ export const ProposalsTable = ({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por cliente ou tipo de projeto..."
+              placeholder="Buscar por cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -115,16 +167,46 @@ export const ProposalsTable = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Tipo de Projeto</TableHead>
                 <TableHead>Data de Envio</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Último Follow-up</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1 px-2"
+                    onClick={() => handleSort("status")}
+                  >
+                    Status
+                    <ArrowUpDown className="h-3 w-3" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1 px-2"
+                    onClick={() => handleSort("lastFollowUp")}
+                  >
+                    Último Follow-up
+                    <ArrowUpDown className="h-3 w-3" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1 px-2"
+                    onClick={() => handleSort("expectedReturnDate")}
+                  >
+                    Previsão de Retorno
+                    <ArrowUpDown className="h-3 w-3" />
+                  </Button>
+                </TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProposals.length === 0 ? (
+              {sortedProposals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">
@@ -133,59 +215,91 @@ export const ProposalsTable = ({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredProposals.map((proposal) => (
-                  <TableRow
-                    key={proposal.id}
-                    className={
-                      needsFollowUp(proposal)
-                        ? "bg-warning/5 hover:bg-warning/10"
-                        : ""
-                    }
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {needsFollowUp(proposal) && (
-                          <AlertCircle className="h-4 w-4 text-warning" />
+                sortedProposals.map((proposal) => {
+                  const isOverdue = isReturnOverdue(proposal);
+                  const isSoon = isReturnSoon(proposal);
+                  const needsAlert = needsFollowUp(proposal);
+                  
+                  let rowClassName = "";
+                  if (isOverdue) {
+                    rowClassName = "bg-destructive/5 hover:bg-destructive/10";
+                  } else if (isSoon) {
+                    rowClassName = "bg-warning/5 hover:bg-warning/10";
+                  } else if (needsAlert) {
+                    rowClassName = "bg-muted/30 hover:bg-muted/50";
+                  }
+
+                  return (
+                    <TableRow key={proposal.id} className={rowClassName}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {(needsAlert || isOverdue || isSoon) && (
+                            <AlertCircle
+                              className={`h-4 w-4 ${
+                                isOverdue
+                                  ? "text-destructive"
+                                  : "text-warning"
+                              }`}
+                            />
+                          )}
+                          {proposal.clientName}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(proposal.sentDate)}</TableCell>
+                      <TableCell className="font-semibold">
+                        {formatCurrency(proposal.value)}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(proposal.status)}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p>{formatDate(proposal.lastFollowUp)}</p>
+                          {needsAlert && (
+                            <p className="text-xs text-warning mt-1">
+                              Há {getDaysSinceFollowUp(proposal.lastFollowUp)} dias
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {proposal.expectedReturnDate ? (
+                          <div>
+                            <p>{formatDate(proposal.expectedReturnDate)}</p>
+                            {isOverdue && (
+                              <p className="text-xs text-destructive mt-1 font-medium">
+                                Vencido há {Math.abs(getDaysUntilReturn(proposal.expectedReturnDate)!)} dias
+                              </p>
+                            )}
+                            {isSoon && !isOverdue && (
+                              <p className="text-xs text-warning mt-1 font-medium">
+                                Em {getDaysUntilReturn(proposal.expectedReturnDate)} dias
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
                         )}
-                        {proposal.clientName}
-                      </div>
-                    </TableCell>
-                    <TableCell>{proposal.projectType}</TableCell>
-                    <TableCell>{formatDate(proposal.sentDate)}</TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(proposal.value)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(proposal.status)}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p>{formatDate(proposal.lastFollowUp)}</p>
-                        {needsFollowUp(proposal) && (
-                          <p className="text-xs text-warning mt-1">
-                            Há {getDaysSinceFollowUp(proposal.lastFollowUp)} dias
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(proposal)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(proposal.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(proposal)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(proposal.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

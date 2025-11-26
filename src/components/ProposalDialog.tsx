@@ -26,15 +26,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Proposal, ProposalStatus } from "@/types/proposal";
+import { Proposal } from "@/types/proposal";
 
 const proposalSchema = z.object({
   clientName: z.string().min(1, "Nome do cliente é obrigatório"),
-  projectType: z.string().min(1, "Tipo de projeto é obrigatório"),
   sentDate: z.string(),
   value: z.coerce.number().min(0, "Valor deve ser maior que zero"),
   status: z.enum(["pending", "approved", "rejected"]),
   lastFollowUp: z.string(),
+  expectedReturnDate: z.string().optional(),
   notes: z.string(),
 });
 
@@ -57,11 +57,11 @@ export const ProposalDialog = ({
     resolver: zodResolver(proposalSchema),
     defaultValues: {
       clientName: "",
-      projectType: "",
       sentDate: new Date().toISOString().split("T")[0],
       value: 0,
       status: "pending",
       lastFollowUp: new Date().toISOString().split("T")[0],
+      expectedReturnDate: "",
       notes: "",
     },
   });
@@ -70,21 +70,23 @@ export const ProposalDialog = ({
     if (proposal) {
       form.reset({
         clientName: proposal.clientName,
-        projectType: proposal.projectType,
         sentDate: proposal.sentDate.toISOString().split("T")[0],
         value: proposal.value,
         status: proposal.status,
         lastFollowUp: proposal.lastFollowUp.toISOString().split("T")[0],
+        expectedReturnDate: proposal.expectedReturnDate
+          ? proposal.expectedReturnDate.toISOString().split("T")[0]
+          : "",
         notes: proposal.notes,
       });
     } else {
       form.reset({
         clientName: "",
-        projectType: "",
         sentDate: new Date().toISOString().split("T")[0],
         value: 0,
         status: "pending",
         lastFollowUp: new Date().toISOString().split("T")[0],
+        expectedReturnDate: "",
         notes: "",
       });
     }
@@ -93,12 +95,14 @@ export const ProposalDialog = ({
   const onSubmit = (data: ProposalFormValues) => {
     const proposalData: Omit<Proposal, "id"> = {
       clientName: data.clientName,
-      projectType: data.projectType,
       value: data.value,
       status: data.status,
       notes: data.notes,
       sentDate: new Date(data.sentDate),
       lastFollowUp: new Date(data.lastFollowUp),
+      expectedReturnDate: data.expectedReturnDate
+        ? new Date(data.expectedReturnDate)
+        : undefined,
     };
 
     if (proposal) {
@@ -131,20 +135,6 @@ export const ProposalDialog = ({
                     <FormLabel>Nome do Cliente</FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: Construtora ABC" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="projectType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Projeto</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Estrutural" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -216,6 +206,20 @@ export const ProposalDialog = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Último Follow-up</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="expectedReturnDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Previsão de Retorno</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
