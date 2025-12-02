@@ -168,6 +168,8 @@ export const ProposalsTable = ({
               <TableRow className="bg-table-header hover:bg-table-header border-b-0">
                 <TableHead className="text-table-header-foreground font-semibold">Cliente</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Data de Envio</TableHead>
+                {/* NOVA COLUNA AQUI */}
+                <TableHead className="text-table-header-foreground font-semibold">Enviado por</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Valor</TableHead>
                 <TableHead>
                   <Button
@@ -208,7 +210,7 @@ export const ProposalsTable = ({
             <TableBody>
               {sortedProposals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <p className="text-muted-foreground">
                       Nenhuma proposta encontrada
                     </p>
@@ -246,6 +248,12 @@ export const ProposalsTable = ({
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(proposal.sentDate)}</TableCell>
+                      
+                      {/* NOVA CÉLULA AQUI */}
+                      <TableCell className="text-sm">
+                        {proposal.sentVia || "-"}
+                      </TableCell>
+
                       <TableCell className="font-semibold">
                         {formatCurrency(proposal.value)}
                       </TableCell>
