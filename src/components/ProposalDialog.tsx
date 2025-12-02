@@ -33,6 +33,7 @@ const proposalSchema = z.object({
   sentDate: z.string(),
   value: z.coerce.number().min(0, "Valor deve ser maior que zero"),
   status: z.enum(["pending", "approved", "rejected"]),
+  sentVia: z.string().optional(), // Validação do novo campo
   lastFollowUp: z.string(),
   expectedReturnDate: z.string().optional(),
   notes: z.string(),
@@ -60,6 +61,7 @@ export const ProposalDialog = ({
       sentDate: new Date().toISOString().split("T")[0],
       value: 0,
       status: "pending",
+      sentVia: "Email", // Valor padrão
       lastFollowUp: new Date().toISOString().split("T")[0],
       expectedReturnDate: "",
       notes: "",
@@ -73,6 +75,7 @@ export const ProposalDialog = ({
         sentDate: proposal.sentDate.toISOString().split("T")[0],
         value: proposal.value,
         status: proposal.status,
+        sentVia: proposal.sentVia || "Email", // Carrega o valor existente
         lastFollowUp: proposal.lastFollowUp.toISOString().split("T")[0],
         expectedReturnDate: proposal.expectedReturnDate
           ? proposal.expectedReturnDate.toISOString().split("T")[0]
@@ -85,6 +88,7 @@ export const ProposalDialog = ({
         sentDate: new Date().toISOString().split("T")[0],
         value: 0,
         status: "pending",
+        sentVia: "Email",
         lastFollowUp: new Date().toISOString().split("T")[0],
         expectedReturnDate: "",
         notes: "",
@@ -97,6 +101,7 @@ export const ProposalDialog = ({
       clientName: data.clientName,
       value: data.value,
       status: data.status,
+      sentVia: data.sentVia, // Salva o novo campo
       notes: data.notes,
       sentDate: new Date(data.sentDate),
       lastFollowUp: new Date(data.lastFollowUp),
@@ -136,6 +141,33 @@ export const ProposalDialog = ({
                     <FormControl>
                       <Input placeholder="Ex: Construtora ABC" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* NOVO CAMPO ADICIONADO AQUI */}
+              <FormField
+                control={form.control}
+                name="sentVia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enviado por</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o meio" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Email">E-mail</SelectItem>
+                        <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                        <SelectItem value="Outro">Outro</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
