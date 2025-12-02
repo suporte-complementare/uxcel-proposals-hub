@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Search, AlertCircle, ArrowUpDown } from "lucide-react";
+import { Edit, Trash2, Search, AlertCircle, ArrowUpDown, Check, X, Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,8 @@ interface ProposalsTableProps {
   proposals: Proposal[];
   onEdit: (proposal: Proposal) => void;
   onDelete: (id: string) => void;
+  // Nova propriedade para receber a função de ações em massa
+  onBulkStatusChange?: (ids: string[], newStatus: ProposalStatus) => void;
 }
 
 type SortField = "status" | "lastFollowUp" | "expectedReturnDate";
@@ -37,11 +39,15 @@ export const ProposalsTable = ({
   proposals,
   onEdit,
   onDelete,
+  onBulkStatusChange,
 }: ProposalsTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  
+  // ESTADO DE SELEÇÃO MÚLTIPLA: Guarda os IDs das propostas marcadas
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const getStatusBadge = (status: ProposalStatus) => {
     const statusConfig = {
@@ -124,15 +130,41 @@ export const ProposalsTable = ({
     }
   };
 
+  // --- LÓGICA DE SELEÇÃO ---
+  
+  // Selecionar ou Deselecionar TUDO
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredProposals.map((p) => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  // Selecionar ou Deselecionar UM
+  const toggleSelectOne = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((sid) => sid !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  // Executar a ação
+  const executeBulkAction = (newStatus: ProposalStatus) => {
+    if (onBulkStatusChange && selectedIds.length > 0) {
+      onBulkStatusChange(selectedIds, newStatus);
+      setSelectedIds([]); // Limpa seleção após ação
+    }
+  };
+
   const filteredProposals = proposals.filter((proposal) =>
     proposal.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const sortedProposals = [...filteredProposals].sort((a, b) => {
     if (!sortField) return 0;
-
     let comparison = 0;
-
     if (sortField === "status") {
       const statusOrder = { pending: 0, approved: 1, rejected: 2 };
       comparison = statusOrder[a.status] - statusOrder[b.status];
@@ -143,15 +175,14 @@ export const ProposalsTable = ({
       const bDate = b.expectedReturnDate?.getTime() ?? Infinity;
       comparison = aDate - bDate;
     }
-
     return sortDirection === "asc" ? comparison : -comparison;
   });
 
   return (
     <>
       <Card className="p-6">
-        <div className="mb-6">
-          <div className="relative">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por cliente..."
@@ -160,15 +191,57 @@ export const ProposalsTable = ({
               className="pl-10"
             />
           </div>
+
+          {/* BARRA DE AÇÕES EM MASSA (Só aparece quando algo é selecionado) */}
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 bg-muted p-2 rounded-md animate-in fade-in slide-in-from-top-1">
+              <span className="text-sm font-medium px-2">
+                {selectedIds.length} selecionados
+              </span>
+              <div className="h-4 w-[1px] bg-border mx-1" />
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                onClick={() => executeBulkAction('approved')}
+              >
+                <Check className="w-4 h-4 mr-1" /> Aprovar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                onClick={() => executeBulkAction('rejected')}
+              >
+                <X className="w-4 h-4 mr-1" /> Recusar
+              </Button>
+               <Button 
+                size="sm" 
+                variant="outline"
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                onClick={() => executeBulkAction('pending')}
+              >
+                <Clock className="w-4 h-4 mr-1" /> Aguardar
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-table-header hover:bg-table-header border-b-0">
+                {/* CHECKBOX CABEÇALHO */}
+                <TableHead className="w-[40px]">
+                  <input 
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    checked={sortedProposals.length > 0 && selectedIds.length === sortedProposals.length}
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
+                </TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Cliente</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Data de Envio</TableHead>
-                {/* NOVA COLUNA AQUI */}
                 <TableHead className="text-table-header-foreground font-semibold">Enviado por</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Valor</TableHead>
                 <TableHead>
@@ -210,7 +283,7 @@ export const ProposalsTable = ({
             <TableBody>
               {sortedProposals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <p className="text-muted-foreground">
                       Nenhuma proposta encontrada
                     </p>
@@ -221,18 +294,30 @@ export const ProposalsTable = ({
                   const isOverdue = isReturnOverdue(proposal);
                   const isSoon = isReturnSoon(proposal);
                   const needsAlert = needsFollowUp(proposal);
+                  const isSelected = selectedIds.includes(proposal.id);
                   
-                  let rowClassName = "";
+                  let rowClassName = isSelected ? "bg-primary/5 " : "";
+                  
+                  // Mantém as cores de alerta, mas suave se selecionado
                   if (isOverdue) {
-                    rowClassName = "bg-alert-overdue/5 hover:bg-alert-overdue/10 border-l-4 border-l-alert-overdue";
+                    rowClassName += "border-l-4 border-l-alert-overdue " + (isSelected ? "bg-alert-overdue/10" : "bg-alert-overdue/5 hover:bg-alert-overdue/10");
                   } else if (isSoon) {
-                    rowClassName = "bg-alert-soon/5 hover:bg-alert-soon/10 border-l-4 border-l-alert-soon";
+                    rowClassName += "border-l-4 border-l-alert-soon " + (isSelected ? "bg-alert-soon/10" : "bg-alert-soon/5 hover:bg-alert-soon/10");
                   } else if (needsAlert) {
-                    rowClassName = "bg-alert-attention/5 hover:bg-alert-attention/10 border-l-2 border-l-alert-attention";
+                    rowClassName += "border-l-2 border-l-alert-attention " + (isSelected ? "bg-alert-attention/10" : "bg-alert-attention/5 hover:bg-alert-attention/10");
                   }
 
                   return (
                     <TableRow key={proposal.id} className={rowClassName}>
+                      {/* CHECKBOX LINHA */}
+                      <TableCell>
+                        <input 
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(proposal.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {isOverdue && (
@@ -248,12 +333,7 @@ export const ProposalsTable = ({
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(proposal.sentDate)}</TableCell>
-                      
-                      {/* NOVA CÉLULA AQUI */}
-                      <TableCell className="text-sm">
-                        {proposal.sentVia || "-"}
-                      </TableCell>
-
+                      <TableCell className="text-sm">{proposal.sentVia || "-"}</TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(proposal.value)}
                       </TableCell>
