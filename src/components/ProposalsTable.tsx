@@ -53,7 +53,7 @@ export const ProposalsTable = ({
 
   // --- ESTADOS DE PAGINAÇÃO E FILTROS ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100;
+  const itemsPerPage = 100; // Define 100 itens por página
   const [showFilters, setShowFilters] = useState(false);
   
   const [dateStart, setDateStart] = useState("");
@@ -326,7 +326,8 @@ export const ProposalsTable = ({
                     Previsão <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-right text-slate-700 font-bold">Ações</TableHead>
+                {/* MUDANÇA VISUAL AQUI: DE "Ações" PARA "Opções" */}
+                <TableHead className="text-right text-slate-700 font-bold">Opções</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
