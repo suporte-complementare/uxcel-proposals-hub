@@ -34,7 +34,7 @@ interface ProposalsTableProps {
   onBulkStatusChange?: (ids: string[], newStatus: ProposalStatus) => void;
 }
 
-// 1. ADICIONADO "clientName" AQUI
+// ADICIONAMOS "clientName" AQUI NA LISTA DE ORDENAÇÃO
 type SortField = "status" | "lastFollowUp" | "expectedReturnDate" | "value" | "sentDate" | "clientName";
 type SortDirection = "asc" | "desc";
 
@@ -51,12 +51,11 @@ export const ProposalsTable = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // --- NOVOS ESTADOS (Paginação e Filtros) ---
+  // --- ESTADOS DE PAGINAÇÃO E FILTROS ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 100;
   const [showFilters, setShowFilters] = useState(false);
   
-  // Estados dos Filtros Avançados
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [valueMin, setValueMin] = useState("");
@@ -154,7 +153,7 @@ export const ProposalsTable = ({
     return matchesSearch && matchesDate && matchesValue;
   });
 
-  // --- ORDENAÇÃO ---
+  // --- LÓGICA DE ORDENAÇÃO ---
   const sortedProposals = [...filteredProposals].sort((a, b) => {
     if (!sortField) return 0;
     let comparison = 0;
@@ -173,7 +172,7 @@ export const ProposalsTable = ({
     } else if (sortField === "sentDate") {
       comparison = a.sentDate.getTime() - b.sentDate.getTime();
     } else if (sortField === "clientName") {
-      // 2. ADICIONADA LÓGICA PARA TEXTO (A-Z)
+      // ORDENAÇÃO DE A-Z PARA CLIENTES
       comparison = a.clientName.localeCompare(b.clientName);
     }
     
@@ -257,7 +256,7 @@ export const ProposalsTable = ({
           )}
         </div>
 
-        {/* ÁREA DE FILTROS AVANÇADOS */}
+        {/* ÁREA DE FILTROS AVANÇADOS (Escondida até clicar no botão Filtros) */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2">
             <div>
@@ -300,7 +299,7 @@ export const ProposalsTable = ({
                   />
                 </TableHead>
                 
-                {/* 3. ATUALIZADO: Cabeçalho Cliente agora clicável */}
+                {/* CABEÇALHO CLIENTE COM CLASSIFICAÇÃO */}
                 <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("clientName")}>
                   Cliente <ArrowUpDown className="h-3 w-3 inline" />
                 </TableHead>
